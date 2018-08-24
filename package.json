@@ -1,14 +1,14 @@
 {
-  "name": "koa-starter",
-  "description": "A boiler-plate setup for API servers with Koa",
+  "name": "api-koa-typescript-starter",
+  "description": "A boiler-plate setup for API servers with Koa and TypeScript",
   "version": "0.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rangle/api-koa-starter.git"
+    "url": "https://github.com/rangle/api-koa-typescript-starter.git"
   },
   "bugs": {
-    "url": "https://github.com/rangle/rangle-starter/issues"
+    "url": "https://github.com/rangle/api-koa-typescript-starter/issues"
   },
   "engines": {
     "node": ">= 8"
@@ -22,7 +22,7 @@
     "staging:stop": "cross-env PROJECT_ENV=staging npm run daemon:stop",
     "test": "cross-env PROJECT_ENV=testing jest --coverage --forceExit --config jest-config.json",
     "test:watch": "cross-env PROJECT_ENV=testing jest --watch",
-    "lint": "eslint . && tslint .",
+    "lint": "tslint --project ./tsconfig.json",
     "raml": "raml2html -i doc/api/api.raml -o api.html",
     "daemon:start": "forever --uid api-koa-starter -a -c 'node --use-strict' start ./dist/app.js",
     "daemon:stop": "forever stop api-koa-starter || true",
