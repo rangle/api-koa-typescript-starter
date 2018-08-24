@@ -8,5 +8,15 @@
     }
   },
   "coverageDirectory": "coverage",
-  "coverageReporters": [ "text", "lcov" ]
+  "coverageReporters": ["text", "lcov"],
+  "globals": {
+    "ts-jest": {
+      "tsConfigFile": "tsconfig.json"
+    }
+  },
+  "moduleFileExtensions": ["ts", "js"],
+  "transform": {
+    "^.+\\.(ts|tsx)$": "ts-jest"
+  },
+  "testEnvironment": "node"
 }
