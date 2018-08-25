@@ -1,8 +1,9 @@
-const { logger } = require('../services/logger');
+import { Context } from 'koa';
+import { logger } from '../services/logger';
 
 const UNKNOWN_ERROR_CODE = 500;
 
-async function errorResponder(ctx, next) {
+export async function errorResponder(ctx: Context, next: Function) {
   try {
     await next();
   } catch (err) {
@@ -15,5 +16,3 @@ async function errorResponder(ctx, next) {
     }
   }
 }
-
-module.exports = { errorResponder };

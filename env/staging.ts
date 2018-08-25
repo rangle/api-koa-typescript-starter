@@ -1,7 +1,5 @@
 /*
  * Staging Environment - demo setup for developers to collaborate on.
  */
-module.exports = {
-  REQUEST_LOGS: true,
-  LOG_LEVEL: 'info',
-};
+export const REQUEST_LOGS = true;
+export const LOG_LEVEL = 'info';

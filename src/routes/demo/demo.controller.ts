@@ -1,11 +1,13 @@
-async function demo(ctx) {
+import { Context } from 'koa';
+
+export async function demo(ctx: Context) {
   ctx.body = 'It works!';
 }
 
 /**
  * Demo Error Responder: Deliberataly return 500 error for testing.
  */
-async function error(ctx) {
+export async function error(ctx: Context) {
   ctx.status = 500;
   ctx.message = 'App Error (this is intentional)!';
 }
@@ -13,14 +15,8 @@ async function error(ctx) {
 /**
  * Demo Error Responder: Deliberataly return 500 error without message for testing.
  */
-async function errorWithoutMessage() {
+export async function errorWithoutMessage() {
   // eslint-disable-next-line no-console
   console.log('About to throw an error deliberately, ignore it.');
   throw new Error('');
 }
-
-module.exports = {
-  demo,
-  error,
-  errorWithoutMessage,
-};

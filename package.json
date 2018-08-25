@@ -1,57 +1,74 @@
 {
-  "name": "koa-starter",
-  "description": "A boiler-plate setup for API servers with Koa",
+  "name": "api-koa-typescript-starter",
+  "description": "A boiler-plate setup for API servers with Koa and TypeScript",
   "version": "0.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rangle/api-koa-starter.git"
+    "url": "https://github.com/rangle/api-koa-typescript-starter.git"
   },
   "bugs": {
-    "url": "https://github.com/rangle/rangle-starter/issues"
+    "url": "https://github.com/rangle/api-koa-typescript-starter/issues"
   },
   "engines": {
     "node": ">= 8"
   },
   "scripts": {
-    "start": "cross-env PROJECT_ENV=staging node --use-strict ./src/app.js",
-    "dev": "cross-env PROJECT_ENV=local nodemon --use-strict ./src/app.js",
+    "start": "cross-env PROJECT_ENV=staging node --use-strict ./dist/app.js",
+    "dev": "cross-env PROJECT_ENV=local ts-node-dev --use-strict ./src/app.ts",
     "local:start": "cross-env PROJECT_ENV=local npm run daemon:start",
     "local:stop": "cross-env PROJECT_ENV=local npm run daemon:stop",
     "staging:start": "cross-env PROJECT_ENV=staging npm run daemon:start",
     "staging:stop": "cross-env PROJECT_ENV=staging npm run daemon:stop",
     "test": "cross-env PROJECT_ENV=testing jest --coverage --forceExit --config jest-config.json",
     "test:watch": "cross-env PROJECT_ENV=testing jest --watch",
-    "lint": "eslint .",
+    "lint": "tslint --project ./tsconfig.json",
     "raml": "raml2html -i doc/api/api.raml -o api.html",
-    "daemon:start": "forever --uid api-koa-starter -a -c 'node --use-strict' start ./src/app.js",
-    "daemon:stop": "forever stop api-koa-starter || true"
+    "daemon:start": "forever --uid api-koa-starter -a -c 'node --use-strict' start ./dist/app.js",
+    "daemon:stop": "forever stop api-koa-starter || true",
+    "build": "tsc"
   },
   "dependencies": {
     "debug": "^3.1.0",
-    "koa": "^2.5.1",
-    "koa-body": "^2.5.0",
+    "koa": "^2.5.2",
+    "koa-body": "^4.0.4",
     "koa-convert": "^1.2.0",
     "koa-helmet": "^4.0.0",
     "koa-morgan": "^1.0.1",
     "koa-router": "^7.4.0",
     "ramda": "^0.25.0",
-    "request": "^2.86.0",
+    "request": "^2.88.0",
     "request-promise": "^4.2.2",
-    "uuid": "^3.2.1",
-    "winston": "^2.4.2"
+    "uuid": "^3.3.2",
+    "winston": "^3.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^23.3.1",
+    "@types/koa": "^2.0.46",
+    "@types/koa-helmet": "^3.1.2",
+    "@types/koa-morgan": "^1.0.4",
+    "@types/koa-router": "^7.0.31",
+    "@types/morgan": "^1.7.35",
+    "@types/ramda": "^0.25.36",
+    "@types/request-promise": "^4.1.42",
+    "@types/supertest": "^2.0.5",
+    "@types/uuid": "^3.4.3",
+    "@types/winston": "^2.4.4",
     "chai": "^4.1.2",
-    "cross-env": "^5.1.5",
-    "eslint": "^4.19.1",
+    "cross-env": "^5.2.0",
+    "eslint": "^5.4.0",
     "forever": "^0.15.2",
     "jest": "^23.5.0",
     "mockery": "^2.1.0",
-    "nodemon": "^1.17.4",
+    "nodemon": "^1.18.3",
     "raml2html": "^7.1.0",
-    "sinon": "^5.0.7",
+    "sinon": "^6.1.5",
     "supertest": "^3.1.0",
-    "throng": "^4.0.0"
+    "throng": "^4.0.0",
+    "ts-jest": "^23.1.4",
+    "ts-node": "^7.0.1",
+    "ts-node-dev": "^1.0.0-pre.26",
+    "tslint": "^5.11.0",
+    "typescript": "^3.0.1"
   }
 }
