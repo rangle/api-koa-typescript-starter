@@ -39,7 +39,7 @@ app
 
 function startFunction() {
   const PORT = process.env.PORT || 3000;
-  logger.info(`Starting server on port ${PORT}`);
+  logger.info(`Starting server on http://localhost:${PORT}`);
   app.listen(PORT);
 }
 
