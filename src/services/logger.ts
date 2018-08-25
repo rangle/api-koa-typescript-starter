@@ -1,20 +1,18 @@
 import { format, createLogger, transports } from 'winston';
 import { k } from '../project-env';
-import { TransformFunction } from 'logform';
 
-const formatter: TransformFunction = info => {
-  return {
-    ...info,
-    message:
-      info && info.requestId ? `[RQID=${info.requestId}] ${info.message}` : `${info.message}`,
-  };
+const formatter = {
+  transform(info: { message: string; requestId?: string; level: string }) {
+    info.message =
+      info && info.requestId
+        ? `[RQID=${info.requestId}] ${info.message}`
+        : `${info.message}`;
+    return info;
+  }
 };
 
 export const logger = createLogger({
-  format: format(formatter)(),
-  transports: [
-    new transports.Console({
-      level: k.LOG_LEVEL,
-    }),
-  ],
+  level: k.LOG_LEVEL,
+  format: format.combine(formatter, format.simple()),
+  transports: [new transports.Console()]
 });
