@@ -15,7 +15,7 @@
   },
   "scripts": {
     "start": "cross-env PROJECT_ENV=staging node --use-strict ./dist/app.js",
-    "dev": "cross-env PROJECT_ENV=local ts-node-dev --use-strict ./src/app.ts",
+    "dev": "cross-env PROJECT_ENV=local ts-node-dev ./src/app.ts",
     "local:start": "cross-env PROJECT_ENV=local npm run daemon:start",
     "local:stop": "cross-env PROJECT_ENV=local npm run daemon:stop",
     "staging:start": "cross-env PROJECT_ENV=staging npm run daemon:start",
