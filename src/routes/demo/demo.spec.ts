@@ -3,6 +3,9 @@ import { app } from '../../app';
 
 const request = supertest.agent(app.listen());
 
+const JWT_TOKEN =
+  'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI0Njk0ZjEzNy01ODE4LTQ5NjQtOGNhMC04NjdhNjdmZjg3M2IiLCJpYXQiOjE1MzU2NjMyMjMsImV4cCI6MTUzNTY2NjgzMH0.z2_pStCwWRxnyIAP7VcFkN-LaBtSuDTQ2_KlVYriPrI';
+
 describe('Demo', () => {
   describe('GET /demo/foo-is-required', () => {
     it('should work if the parameter is present', () => {
@@ -13,7 +16,41 @@ describe('Demo', () => {
     });
 
     it('should result in a 400 is parameter is missing', () => {
-      return request.get('/demo/foo-is-required').expect(400, 'foo is required.');
+      return request
+        .get('/demo/foo-is-required')
+        .expect(400, 'foo is required.');
+    });
+  });
+
+  describe('GET /demo/foo-is-required-and-protected', () => {
+    it('should work if authorized the parameter is present', () => {
+      return request
+        .get('/demo/foo-is-required-and-protected')
+        .query({ foo: 'abc' })
+        .set('Authorization', `Bearer ${JWT_TOKEN}`)
+        .expect(200, 'It works!');
+    });
+
+    it('should result in a 400 is parameter is missing', () => {
+      return request
+        .get('/demo/foo-is-required-and-protected')
+        .set('Authorization', `Bearer ${JWT_TOKEN}`)
+        .expect(400, 'foo is required.');
+    });
+
+    it('should result in a 401 if authorization token is missing', () => {
+      return request
+        .get('/demo/foo-is-required-and-protected')
+        .query({ foo: 'abc' })
+        .expect(401);
+    });
+
+    it('should result in a 401 if authorization token is invalid', () => {
+      return request
+        .get('/demo/foo-is-required-and-protected')
+        .set('Authorization', `Bearer invalid_token`)
+        .query({ foo: 'abc' })
+        .expect(401);
     });
   });
 
@@ -40,7 +77,9 @@ describe('Demo', () => {
     });
 
     it('should result in a 400 if the parameter is missing', () => {
-      return request.get('/demo/foo-must-be-numeric').expect(400, 'foo is required.');
+      return request
+        .get('/demo/foo-must-be-numeric')
+        .expect(400, 'foo is required.');
     });
   });
 
@@ -50,8 +89,8 @@ describe('Demo', () => {
         .post('/demo/body-must-have-foo-with-bar')
         .send({
           foo: {
-            bar: 'abc',
-          },
+            bar: 'abc'
+          }
         })
         .expect(200, 'It works!');
     });
@@ -67,7 +106,7 @@ describe('Demo', () => {
       return request
         .post('/demo/body-must-have-foo-with-bar')
         .send({
-          foo: {},
+          foo: {}
         })
         .expect(400, 'bar is required.');
     });
@@ -75,7 +114,9 @@ describe('Demo', () => {
 
   describe('GET /demo/error', () => {
     it('should result in 500 app error response', () => {
-      return request.get('/demo/error').expect(500, 'App Error (this is intentional)!');
+      return request
+        .get('/demo/error')
+        .expect(500, 'App Error (this is intentional)!');
     });
   });
 

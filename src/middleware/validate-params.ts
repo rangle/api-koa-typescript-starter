@@ -30,7 +30,9 @@ export const validateParams = <T>(
   const container: Container<T> = R.path(containerPath, ctx);
 
   if (!container) {
-    logger.warn('Invalid param container:', container, { requestId: ctx.requestId });
+    logger.warn('Invalid param container %j: %j', container, {
+      requestId: ctx.requestId
+    });
     ctx.throw(400, 'Bad request');
   }
 
@@ -38,9 +40,11 @@ export const validateParams = <T>(
   await next();
 };
 
-const assertValid = <T>(ctx: Context, container: Container<T>, validator?: Validator<T>) => (
-  param: string
-) => {
+const assertValid = <T>(
+  ctx: Context,
+  container: Container<T>,
+  validator?: Validator<T>
+) => (param: string) => {
   if (!container[param]) {
     ctx.throw(400, `${param} is required.`);
   }

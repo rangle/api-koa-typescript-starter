@@ -36,18 +36,17 @@ const APP_COOKIE = 'JWT_COOKIE';
 
 app
   .use(helmet())
+  .use(
+    jwt({
+      secret: k.JWT_SECRET,
+      passthrough: true
+    })
+  )
   .use(bodyParser())
   .use(generateRequestId)
   .use(errorResponder)
   .use(api.routes())
-  .use(api.allowedMethods())
-  .use(
-    jwt({
-      cookie: USE_COOKIE ? APP_COOKIE : undefined,
-      secret: k.JWT_SECRET,
-      passthrough: true
-    })
-  );
+  .use(api.allowedMethods());
 
 function startFunction() {
   const PORT = process.env.PORT || 3000;
