@@ -9,6 +9,7 @@ if (!PROJECT_ENV || !ENV_WHITELIST.includes(PROJECT_ENV)) {
 interface ProjectEnv {
   REQUEST_LOGS: boolean;
   LOG_LEVEL?: string;
+  JWT_SECRET: string;
 }
 
 export const k: ProjectEnv = require(`../env/${PROJECT_ENV}`);
