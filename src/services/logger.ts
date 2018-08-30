@@ -1,18 +1,13 @@
 import { format, createLogger, transports } from 'winston';
 import { k } from '../project-env';
 
-const formatter = {
-  transform(info: { message: string; requestId?: string; level: string }) {
-    info.message =
-      info && info.requestId
-        ? `[RQID=${info.requestId}] ${info.message}`
-        : `${info.message}`;
-    return info;
-  }
-};
+const template = (info: { message: string; requestId?: string }) =>
+  info && info.requestId
+    ? `[RQID=${info.requestId}] ${info.message}`
+    : `${info.message}`;
 
 export const logger = createLogger({
   level: k.LOG_LEVEL,
-  format: format.combine(formatter, format.simple()),
+  format: format.printf(template),
   transports: [new transports.Console()]
 });
