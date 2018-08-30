@@ -8,6 +8,6 @@ const template = (info: { message: string; requestId?: string }) =>
 
 export const logger = createLogger({
   level: k.LOG_LEVEL,
-  format: format.printf(template),
+  format: format.combine(format.splat(), format.printf(template)),
   transports: [new transports.Console()]
 });

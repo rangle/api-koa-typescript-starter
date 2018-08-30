@@ -1,7 +1,9 @@
+import { JWT_SECRET } from './../env/local';
 import Koa from 'koa';
 import koaRouter from 'koa-router';
 import bodyParser from 'koa-body';
 import helmet from 'koa-helmet';
+import jwt from 'koa-jwt';
 import { logger } from './services/logger';
 import { generateRequestId } from './middleware/request-id-generator';
 import { errorResponder } from './middleware/error-responder';
@@ -29,8 +31,17 @@ if (k.REQUEST_LOGS) {
   app.use(morgan(format));
 }
 
+const USE_COOKIE = false;
+const APP_COOKIE = 'JWT_COOKIE';
+
 app
   .use(helmet())
+  .use(
+    jwt({
+      secret: k.JWT_SECRET,
+      passthrough: true
+    })
+  )
   .use(bodyParser())
   .use(generateRequestId)
   .use(errorResponder)

@@ -27,22 +27,24 @@ export async function deep(ctx: Context) {
     // loop works in NodeJS.
     const data = await getArbitraryData({
       requestId: ctx.requestId,
-      path: 'posts',
+      path: 'posts'
     });
 
-    logger.debug('Deep health check got:', data, { requestId: ctx.requestId });
+    logger.debug('Deep health check got %j %j', data, {
+      requestId: ctx.requestId
+    });
     ctx.body = {
       healthy: true,
       services: {
-        arbitraryDataService: { healthy: true },
-      },
+        arbitraryDataService: { healthy: true }
+      }
     };
   } catch (error) {
     ctx.body = {
       healthy: false,
       services: {
-        arbitraryDataService: { healthy: false },
-      },
+        arbitraryDataService: { healthy: false }
+      }
     };
   }
 }
