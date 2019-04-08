@@ -4,8 +4,8 @@ import { logger } from '../services/logger';
 const UNAUTHORIZED_STATUS = 401;
 
 export async function authorize(ctx: Context, next: Function) {
-  if (ctx.state.user) {
-    logger.info('Authorized JWT token: %j', ctx.state.user);
+  if (ctx.state.jwt_data) {
+    logger.info('Authorized JWT token: %j', ctx.state.jwt_data);
     await next();
   } else {
     ctx.status = UNAUTHORIZED_STATUS;

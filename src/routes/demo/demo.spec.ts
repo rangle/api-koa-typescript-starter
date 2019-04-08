@@ -3,8 +3,9 @@ import { app } from '../../app';
 
 const request = supertest.agent(app.listen());
 
+// note: JWT token will expire on: 2025-10-15
 const JWT_TOKEN =
-  'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI0Njk0ZjEzNy01ODE4LTQ5NjQtOGNhMC04NjdhNjdmZjg3M2IiLCJpYXQiOjE1MzU2NjMyMjMsImV4cCI6MTUzNTY2NjgzMH0.z2_pStCwWRxnyIAP7VcFkN-LaBtSuDTQ2_KlVYriPrI';
+  'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI0Njk0ZjEzNy01ODE4LTQ5NjQtOGNhMC04NjdhNjdmZjg3M2IiLCJpYXQiOjE1MzU2NjMyMjMsImV4cCI6MTc2MDQ4NjQwMH0.e5QvpnNwxHqMYAiS0NRTPMcKYVQWPikBIzILO5MfBsk';
 
 describe('Demo', () => {
   describe('GET /demo/foo-is-required', () => {
@@ -23,7 +24,7 @@ describe('Demo', () => {
   });
 
   describe('GET /demo/foo-is-required-and-protected', () => {
-    it('should work if authorized the parameter is present', () => {
+    it('should work if authorized and the parameter is present', () => {
       return request
         .get('/demo/foo-is-required-and-protected')
         .query({ foo: 'abc' })
@@ -31,7 +32,7 @@ describe('Demo', () => {
         .expect(200, 'It works!');
     });
 
-    it('should result in a 400 is parameter is missing', () => {
+    it('should result in a 400 if parameter is missing', () => {
       return request
         .get('/demo/foo-is-required-and-protected')
         .set('Authorization', `Bearer ${JWT_TOKEN}`)
