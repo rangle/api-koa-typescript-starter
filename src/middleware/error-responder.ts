@@ -10,9 +10,9 @@ export async function errorResponder(ctx: Context, next: Function) {
     ctx.status = err.status || UNKNOWN_ERROR_CODE;
     ctx.body = err.message || '';
 
-    logger.error(`${ctx.status} response: ${ctx.body}`, { requestId: ctx.requestId });
+    logger.error(`${ctx.status} response: ${ctx.body}`, { requestId: ctx.context.requestId });
     if (ctx.status === UNKNOWN_ERROR_CODE) {
-      logger.error(`${err.stack}`, { requestId: ctx.requestId });
+      logger.error(`${err.stack}`, { requestId: ctx.context.requestId });
     }
   }
 }

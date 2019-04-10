@@ -11,7 +11,7 @@ export async function authorize(ctx: Context, next: Function) {
     ctx.status = UNAUTHORIZED_STATUS;
     ctx.body = 'Unauthorized';
     logger.error(`${ctx.status} response: ${ctx.body}`, {
-      requestId: ctx.requestId
+      requestId: ctx.context.requestId
     });
   }
 }

@@ -10,6 +10,7 @@ const match = (regex: RegExp) => (term: string) => regex.test(term);
  * A simple module to demonstrate declarative parameter validation.
  */
 export const demoRouter = new koaRouter()
+  .get('/demo', demo)
   .get('/foo-is-required', validateParams<string>(['query'], ['foo']), demo)
   .get(
     '/foo-must-be-numeric',

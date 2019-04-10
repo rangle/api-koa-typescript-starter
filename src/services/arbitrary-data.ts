@@ -1,4 +1,4 @@
-import { outgoingRequest } from './outgoing-request-service';
+import { outgoingRequest } from './outgoing-request';
 
 const ARBITRARY_DATA_SERVICE_BASE_URL = 'https://jsonplaceholder.typicode.com';
 

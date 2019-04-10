@@ -1,5 +1,5 @@
 import { format, createLogger, transports } from 'winston';
-import { k } from '../project-env';
+import { env } from '../env';
 
 const template = (info: { message: string; requestId?: string }) =>
   info && info.requestId
@@ -7,7 +7,7 @@ const template = (info: { message: string; requestId?: string }) =>
     : `${info.message}`;
 
 export const logger = createLogger({
-  level: k.LOG_LEVEL,
+  level: env.LOG_LEVEL,
   format: format.combine(format.splat(), format.printf(template)),
   transports: [new transports.Console()]
 });

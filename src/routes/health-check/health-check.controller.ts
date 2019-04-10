@@ -1,5 +1,5 @@
 import { Context } from 'koa';
-import { getArbitraryData } from '../../services/arbitrary-data.service';
+import { getArbitraryData } from '../../services/arbitrary-data';
 import { logger } from '../../services/logger';
 
 /**
@@ -26,12 +26,12 @@ export async function deep(ctx: Context) {
     // important for making sense of server logs, given the way the event
     // loop works in NodeJS.
     const data = await getArbitraryData({
-      requestId: ctx.requestId,
+      requestId: ctx.context.requestId,
       path: 'posts'
     });
 
     logger.debug('Deep health check got %j %j', data, {
-      requestId: ctx.requestId
+      requestId: ctx.context.requestId
     });
     ctx.body = {
       healthy: true,

@@ -1,50 +1,58 @@
-import { JWT_SECRET } from './../env/local';
+import { env } from './env';
+
 import Koa from 'koa';
 import koaRouter from 'koa-router';
 import bodyParser from 'koa-body';
 import helmet from 'koa-helmet';
-import jwt from 'koa-jwt';
+
 import { logger } from './services/logger';
-import { generateRequestId } from './middleware/request-id-generator';
+
+import { requestId } from './middleware/request-id';
 import { errorResponder } from './middleware/error-responder';
-import { k } from './project-env';
+import { morganFormatter } from './middleware/morgan-formatter';
+import { validateJwt } from './middleware/validate-jwt';
+import { swaggerEndpoint } from './middleware/swagger-endpoint';
+
 import { rootRouter } from './routes/root.routes';
 import { healthCheckRouter } from './routes/health-check/health-check.routes';
 import { demoRouter } from './routes/demo/demo.routes';
 
+import { AppContext } from './app-context';
+
+import { resolveSchemaRefs } from './utils/swagger-utils';
+
+import * as yaml from 'js-yaml';
+import fs from 'fs';
+
+const origSchema = yaml.safeLoad(fs.readFileSync(__dirname + '/swagger.spec.yml').toString());
+const schema = resolveSchemaRefs(origSchema);
+
+declare module 'koa' {
+  interface Context {
+    context?: AppContext;
+  }
+}
+
 export const app = new Koa();
+app.context.context = {
+}; // as AppContext;
+
+/* istanbul ignore if */
+if (env.REQUEST_LOGS) {
+  app.use(morganFormatter());
+}
 
 // Entry point for all modules.
 const api = new koaRouter()
-  .use('/', rootRouter.routes())
+  .use('/', swaggerEndpoint({ schema, id: 'get_status' }), rootRouter.routes())
   .use('/health', healthCheckRouter.routes())
   .use('/demo', demoRouter.routes());
 
-/* istanbul ignore if */
-if (k.REQUEST_LOGS) {
-  const morgan = require('koa-morgan');
-  const format =
-    '[RQID=:request-id] - :remote-user' +
-    ' [:date[clf]] ":method :url HTTP/:http-version" ' +
-    ':status :res[content-length] ":referrer" ":user-agent"';
-  morgan.token('request-id', (req: Koa.IncomingMessage) => req.requestId);
-  app.use(morgan(format));
-}
-
-const USE_COOKIE = false;
-const APP_COOKIE = 'JWT_COOKIE';
-
 app
   .use(helmet())
-  .use(
-    jwt({
-      secret: k.JWT_SECRET,
-      key: 'jwt_data',
-      passthrough: true
-    })
-  )
+  .use(validateJwt({ secret: env.JWT_SECRET, key: 'jwt_data' }))
   .use(bodyParser())
-  .use(generateRequestId)
+  .use(requestId)
   .use(errorResponder)
   .use(api.routes())
   .use(api.allowedMethods());
@@ -58,10 +66,5 @@ function startFunction() {
 
 /* istanbul ignore if */
 if (require.main === module) {
-  if (process.env.PROJECT_ENV === 'staging') {
-    const throng = require('throng');
-    throng(startFunction);
-  } else {
-    startFunction();
-  }
+  startFunction();
 }

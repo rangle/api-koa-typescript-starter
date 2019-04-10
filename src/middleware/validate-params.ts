@@ -31,7 +31,7 @@ export const validateParams = <T>(
 
   if (!container) {
     logger.warn('Invalid param container %j: %j', container, {
-      requestId: ctx.requestId
+      requestId: ctx.context.requestId
     });
     ctx.throw(400, 'Bad request');
   }

@@ -1,0 +1,1523 @@
+---
+swagger: '2.0'
+info:
+  title: BIM360 Design Collaboration Package service
+  description: This is the API definition for the `BIM360 Design Collaboration` `Package` service.
+  version: 1.0.0
+  contact: { name: Autodesk, url: https://www.autodesk.com } # email: info@autodesk.com
+  # termsOfService:
+  # license: { name: '', url: '' }
+
+host:     dcs.autodesk.com
+basePath: /dcs/package/v1
+schemes:  [ https ]
+consumes: []
+produces: []
+
+tags:
+- { name: projects,  description: 'projects operations' }
+- { name: teams,     description: 'teams operations' }
+- { name: packages,  description: 'packages operations' }
+- { name: events,    description: 'events operations' }
+- { name: misc,      description: 'misc operations' }
+- { name: webhooks,  description: 'webhooks operations' }
+- { name: schedules, description: 'publishing schedule management' }
+
+# security
+
+x-adsk-cors-headers:
+  - 'authorization'
+  - 'content-type'
+  - 'x-request-id'
+  - 'if-match'
+  - 'if-none-match'
+  - 'x-client-id'
+  - 'x-fluent-client-id'
+  - 'x-fluent-client-version'
+
+x-adsk-apigee:
+  x-adsk-internal-only: true
+  proxy:
+    # see: https://wiki.autodesk.com/pages/viewpage.action?spaceKey=APIP&title=Forge+-+Rate+Limiting#Forge-RateLimiting-Anapplicationwithalargeuserbaseshouldbeabletorequesttheratelimitstobeappliedforitsenduser.
+    rateLimit:                { apikey: { default: 120 }, oxygenid: { default: 120 } }
+    idleTimeout:              60000 # in ms
+  slo:
+    namespaceId:              tcollab
+    proxyName:                oauth-fluent-package-service
+    latency:
+      percentiles:            [ 50, 90, 95, 99 ]
+    errorRate:
+      maximumErrorPercentage: 0.5
+      errorCodes:             [ 500, 501, 502, 503, 504 ]
+
+securityDefinitions:
+  3-legged:
+    type:             oauth2
+    authorizationUrl: https://developer.api.autodesk.com/authentication/v1/authorize
+    tokenUrl:         https://developer.api.autodesk.com/authentication/v1/gettoken
+    flow:             accessCode
+    scopes:
+      data:read:      Allows to read data.
+      data:write:     Allows to write data.
+
+# externalDocs:
+paths:
+  /hubs/{hubId}/projects/{projectId}:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    get:
+      operationId:      get_project
+      summary:          Returns details about the given project.
+      description:      Returns details about the given project (if the project has been activated as entitlement for the calling user).
+      tags:             [ projects ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_project_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 500, p90: 800, p95: 1000, p99: 2000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true }
+        db:             READ
+    put:
+      operationId:      init_project
+      summary:          Initializes the given project.
+      description:      Initializes the given project and returns the details about the initialized project. This operation can only be performed by a `Project Admin`.
+      tags:             [ projects ]
+      parameters:
+      - { $ref: '#/parameters/body_initProject' }
+      consumes:         [ application/json ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/init_project_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1500, p90: 2000, p95: 2500, p99: 5000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isProjectAdmin: true, hasFluentEntitlement: true }
+        db:             WRITE
+    patch:
+      x-adsk-internal-only: true
+      operationId:      update_project
+      summary:          Allows to update the `read-only` flag for the given project.
+      description:      "Allows to update the `read-only` flag for the given project. This operation can only be performed by a `Project Admin` and the given project needs to be marked as `isDeletable` during it's initialization."
+      tags:             [ projects ]
+      parameters:
+      - { $ref: '#/parameters/header_ifMatch' }
+      - { $ref: '#/parameters/body_updateProject' }
+      consumes:         [ application/json ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/update_project_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 500, p90: 700, p95: 850, p99: 1000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isProjectAdmin: true, hasFluentEntitlement: true, isProjectWritable: true }
+        db:             WRITE
+    delete:
+      x-adsk-internal-only: true
+      operationId:      delete_project
+      summary:          Deletes the given project again.
+      description:      "Deletes the given project again removing all associated entries in the internal DB. This operation can only be performed by a `Project Admin` and the given project needs to be marked as `isDeletable` during it's initialization."
+      tags:             [ projects ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        204:            { $ref: '#/responses/delete_project_204' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 500, p90: 700, p95: 850, p99: 1000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isProjectAdmin: true, hasFluentEntitlement: true, isProjectWritable: true, isProjectDeletable: true }
+        db:             WRITE
+
+  /hubs/{hubId}/projects/{projectId}/teams:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    get:
+      operationId:      list_teams
+      summary:          Returns the teams list.
+      description:      Returns the `teams` list for the given `project`.
+      tags:             [ teams ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_teams_list_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 2000, p95: 3000, p99: 4000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true }
+        db:             READ
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    get:
+      operationId:      get_team
+      summary:          Returns team details.
+      description:      Returns the details for the requested `team`.
+      tags:             [ teams ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_team_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 2000, p95: 3000, p99: 4000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true }
+        db:             READ
+    put:
+      operationId:      create_team
+      summary:          Creates a team.
+      description:      Returns the details for the created `team`.
+      tags:             [ teams ]
+      parameters:
+      - { $ref: '#/parameters/body_createTeam' }
+      consumes:         [ application/json ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/create_team_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 2000, p95: 4000, p99: 12000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isProjectAdmin: true, hasFluentEntitlement: true, isProjectWritable: true }
+        db:             WRITE
+    patch:
+      operationId:      update_team
+      summary:          Updates an existing team.
+      description:      Updates an existing `team` and returns the details for the updated `team`.
+      tags:             [ teams ]
+      parameters:
+      - { $ref: '#/parameters/header_ifMatch' }
+      - { $ref: '#/parameters/body_updateTeam' }
+      consumes:         [ application/json ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/update_team_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 2000, p95: 3000, p99: 4000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isProjectAdmin: true, hasFluentEntitlement: true, isProjectWritable: true, teamExists: true }
+        db:             WRITE
+    delete:
+      operationId:      delete_team
+      summary:          Deletes the given team.
+      description:      "Deletes the given team removing all associated entries in the internal DB. This operation can only be performed by a `project admin` and the given team needs to have no shared/consumed packages."
+      tags:             [ teams ]
+      parameters:
+      - { $ref: '#/parameters/header_ifMatch' }
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        204:            { $ref: '#/responses/delete_team_204' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 500, p90: 700, p95: 850, p99: 1000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isProjectAdmin: true, hasFluentEntitlement: true, isProjectWritable: true, teamExists: true }
+        db:             WRITE
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/events:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    get:
+      operationId:      list_events
+      summary:          Returns the package events.
+      description:      Returns the package events visible to the requesting `team`.
+      tags:             [ events ]
+      parameters:
+      - { $ref: '#/parameters/query_epochSince' }
+      - { $ref: '#/parameters/query_epochUntil' }
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_events_list_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 1500, p95: 2000, p99: 3000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true, teamExists: true, hasTeamPermission: CAN_VIEW_WIP }
+        db:             READ
+
+  /hubs/{hubId}/projects/{projectId}/events_key:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    get:
+      operationId:      get_events_creds
+      summary:          Get credentials to hook into the realtime notification system.
+      description:      Get `credentials` to hook into the realtime notification system scoped to the provided `project`.
+      tags:             [ events ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_events_creds_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 750, p90: 1000, p95: 1200, p99: 2000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true }
+        db:             READ
+
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/packages:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    get:
+      operationId:      list_packages
+      summary:          List packages available for the given team.
+      description:      List packages available for the given team.
+      tags:             [ packages ]
+      parameters:
+      - { $ref: '#/parameters/query_packageWithDetailsDefaultFalse' }
+      - { $ref: '#/parameters/query_filterPackagesByModels' }
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_packages_list_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 4000, p90: 6000, p95: 7500, p99: 10000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true, teamExists: true, hasTeamPermission: [CAN_VIEW_WIP] }
+        db:             READ
+    post:
+      operationId:      create_package
+      summary:          Creates a new package.
+      description:      Creates a new `package` in `WIP` state for the requesting `team` and returns the corresponding `package` details.
+      tags:             [ packages ]
+      parameters:
+      - { $ref: '#/parameters/body_createPackage' }
+      consumes:         [ application/json ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/create_package_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 5000, p90: 10000, p95: 20000, p99: 30000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, isProjectWritable: true, teamExists: true, hasTeamPermission: CAN_EDIT_WIP }
+        db:             WRITE
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/packages/{packageId}:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    - { $ref: '#/parameters/packageId' }
+    get:
+      operationId:      get_package
+      summary:          Returns the package details.
+      description:      Returns the package details visible to the requesting `team`.
+      tags:             [ packages ]
+      parameters:
+      - { $ref: '#/parameters/query_packageWithDetailsDefaultTrue' }
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_package_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 4000, p90: 6000, p95: 7500, p99: 10000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true, teamExists: true, hasTeamPermission: CAN_VIEW_WIP, packageExists: true }
+        db:             READ
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/packages/{packageId}/versions/{packageVersion}:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    - { $ref: '#/parameters/packageId' }
+    - { $ref: '#/parameters/packageVersion' }
+    patch:
+      operationId:      update_package
+      summary:          Updates an existing package.
+      description:      Updates an existsing `package` which needs still to be in `WIP` state for the requesting `team` and returns the corresponding updated `package` details.
+      tags:             [ packages ]
+      parameters:
+      - { $ref: '#/parameters/body_updatePackage' }
+      consumes:         [ application/json ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/update_package_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 5000, p90: 10000, p95: 20000, p99: 30000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, isProjectWritable: true, teamExists: true, hasTeamPermission: CAN_EDIT_WIP, packageVersionExists: true }
+        db:             WRITE
+    delete:
+      operationId:      delete_package
+      summary:          Deletes an existing package.
+      description:      Deletes an existsing `package` which needs still to be in `WIP` state for the requesting `team`.
+      tags:             [ packages ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/delete_package_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 5000, p90: 10000, p95: 20000, p99: 30000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, isProjectWritable: true, teamExists: true, hasTeamPermission: CAN_EDIT_WIP, packageVersionExists: true }
+        db:             WRITE
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/packages/{packageId}/versions/{packageVersion}/share:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    - { $ref: '#/parameters/packageId' }
+    - { $ref: '#/parameters/packageVersion' }
+    post:
+      operationId:      share_package
+      summary:          Shares the given package.
+      description:      Shares the given package (identified by `packageId` and `packageVersion`) and returns updated `package` definition.
+      tags:             [ packages ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/share_package_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 5000, p90: 10000, p95: 20000, p99: 30000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, isProjectWritable: true, teamExists: true, hasTeamPermission: CAN_SHARE_WIP, packageVersionExists: true }
+        db:             WRITE
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/packages/{packageId}/versions/{packageVersion}/consume:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    - { $ref: '#/parameters/packageId' }
+    - { $ref: '#/parameters/packageVersion' }
+    post:
+      operationId:      consume_package
+      summary:          Consumes the given package.
+      description:      Consumes the given package (identified by `packageId` and `packageVersion`) and returns updated `package` definition.
+      tags:             [ packages ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/consume_package_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 5000, p90: 10000, p95: 20000, p99: 30000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, isProjectWritable: true, teamExists: true, hasTeamPermission: CAN_CONSUME_SHARED, packageVersionExists: true }
+        db:             WRITE
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/packages/{packageId}/versions/{packageVersion}/addToDocumentSet:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    - { $ref: '#/parameters/packageId' }
+    - { $ref: '#/parameters/packageVersion' }
+    post:
+      operationId:      add_pkg_to_doc_set
+      summary:          Adds the contents of a package to a `Document Set`.
+      description:      >
+        Adds the contents of a `SHARED` package to a `Document Set` in `BIM360 Docs`.
+        In order to call this endpoint the corresponding package version needs to point to a `SHARED` package and the caller needs to have at least `CAN_SHARE_WIP` permissions in the corresponding `team`.
+      tags:             [ packages ]
+      parameters:
+      - { $ref: '#/parameters/body_addToDocumentSet' }
+      - { $ref: '#/parameters/query_forceUpdateDocumentSet' }
+      consumes:         [ application/json ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/add_pkg_to_doc_set_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 5000, p90: 7500, p95: 10000, p99: 15000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true, teamExists: true, hasTeamPermission: CAN_ADMIN_TEAM, packageVersionExists: true }
+        db:             WRITE
+
+  /hubs/{hubId}/projects/{projectId}/teams/{teamId}/schedules:
+    parameters:
+    - { $ref: '#/parameters/hubId' }
+    - { $ref: '#/parameters/projectId' }
+    - { $ref: '#/parameters/teamId' }
+    get:
+      operationId:      get_schedule
+      summary:          Gets the current `C4R` publishing `schedule` for the team.
+      description:      "Gets the current `C4R` publishing `schedule` for the team.<br>**Note:** all time related properties are specified in `UTC`!"
+      tags:             [ schedules ]
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read' ]
+      responses:
+        200:            { $ref: '#/responses/get_schedule_200' }
+        204:            { $ref: '#/responses/empty_schedule_204' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 2000, p95: 3000, p99: 4000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, projectExists: true, teamExists: true, hasTeamPermission: CAN_VIEW_WIP }
+        db:             READ
+    post:
+      operationId:      update_schedule
+      summary:          Creates or updates the `C4R` publishing `schedule` for the team.
+      description:      Creates or updates the `C4R` publishing `schedule` for the team.<br>**Note:** all time related properties are specified in `UTC`!"
+      tags:             [ schedules ]
+      parameters:
+      - { $ref: '#/parameters/header_ifMatch' }
+      - { $ref: '#/parameters/body_updateSchedule' }
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        200:            { $ref: '#/responses/get_schedule_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 2000, p95: 3000, p99: 4000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, hasRCWEntitlement: true, isProjectWritable: true, teamExists: true, hasTeamPermission: CAN_ADMIN_TEAM }
+        db:             WRITE
+    delete:
+      operationId:      delete_schedule
+      summary:          Deletes the `C4R` publishing `schedule` for the team again.
+      description:      Deletes the `C4R` publishing `schedule` for the team again.
+      tags:             [ schedules ]
+      parameters:
+          - { $ref: '#/parameters/header_ifMatch' }
+      produces:         [ application/json ]
+      security:
+      - 3-legged:       [ 'data:read', 'data:write' ]
+      responses:
+        204:            { $ref: '#/responses/empty_schedule_204' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:    { x-adsk-internal-only: true, slo: { latency: { percentileRanks: { p50: 1000, p90: 2000, p95: 3000, p99: 4000 } } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { hasFluentEntitlement: true, isProjectWritable: true, teamExists: true, hasTeamPermission: CAN_ADMIN_TEAM }
+        db:             WRITE
+
+  /webhooks/forge/projects/{projectId}:
+    x-adsk-internal-only: true
+    parameters:
+    - { $ref: '#/parameters/projectId' }
+    post:
+      operationId:      post_webhooks_forge
+      summary:          Target for the Forge Webhooks.
+      description:      "Target for the `Forge Webhooks`."
+      tags:             [ webhooks ]
+      parameters:
+      - { $ref: '#/parameters/header_xAdskSignature' }
+      consumes:         [ application/json ]
+      responses:
+        204:            { $ref: '#/responses/webhooks_forge_204' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:
+        x-adsk-internal-only: true
+        proxy:          { rateLimit: { apikey: { default: 3000 }, oxygenid: { default: 3000 } } } # increase the rate-limit for incoming forge webhooks endpoint
+        slo:            { latency: { percentileRanks: { p50: 200, p90: 500, p95: 750, p99: 1000 } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isValidPayloadSignature: true, projectExists: true }
+        db:             READ
+
+  /webhooks/c4r/projects/{projectId}:
+    x-adsk-internal-only: true
+    parameters:
+    - { $ref: '#/parameters/projectId' }
+    post:
+      operationId:      post_webhooks_c4r
+      summary:          Target for the C4R webhooks.
+      description:      "Target for the `C4R` webhooks."
+      tags:             [ webhooks ]
+      parameters:
+      - { $ref: '#/parameters/header_xAdskSignature' }
+      consumes:         [ application/json ]
+      responses:
+        204:            { $ref: '#/responses/webhooks_c4r_204' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:
+        x-adsk-internal-only: true
+        proxy:          { rateLimit: { apikey: { default: 3000 }, oxygenid: { default: 3000 } } } # increase the rate-limit for incoming c4r webhooks endpoint
+        slo:            { latency: { percentileRanks: { p50: 200, p90: 500, p95: 750, p99: 1000 } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isValidPayloadSignature: true, projectExists: true }
+        db:             READ
+
+  /webhooks/otg/projects/{projectId}:
+    x-adsk-internal-only: true
+    parameters:
+    - { $ref: '#/parameters/projectId' }
+    post:
+      operationId:      post_webhooks_otg
+      summary:          Target for the OTG webhooks.
+      description:      "Target for the `OTG` webhooks."
+      tags:             [ webhooks ]
+      parameters:
+      - { $ref: '#/parameters/query_otgContext'   }
+      - { $ref: '#/parameters/query_otgSignature' }
+      consumes:         [ application/json ]
+      responses:
+        204:            { $ref: '#/responses/webhooks_otg_204' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:
+        x-adsk-internal-only: true
+        proxy:          { rateLimit: { apikey: { default: 3000 }, oxygenid: { default: 3000 } } } # increase the rate-limit for incoming otg webhooks endpoint
+        slo:            { latency: { percentileRanks: { p50: 200, p90: 500, p95: 750, p99: 1000 } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        checks:         { isValidPayloadSignature: true, projectExists: true }
+        db:             READ
+
+  /status:
+    get:
+      operationId:      get_status
+      summary:          Returns the status information.
+      description:      Returns `status`/`health` information for the service.
+      tags:             [ misc ]
+      produces:         [ application/json ]
+      responses:
+        200:            { $ref: '#/responses/get_status_200' }
+        default:        { $ref: '#/responses/error_response' }
+      x-adsk-apigee:
+        x-adsk-internal-only: true
+        proxy:          { rateLimit: { apikey: { default: 1200 }, oxygenid: { default: 1200 } } } # increase the rate-limit for the status/health endpoint
+        slo:            { latency: { percentileRanks: { p50: 500, p90: 700, p95: 900, p99: 1000 } } } # timing values are in ms
+      x-adsk-dcs-pkg:
+        db:             READ
+
+  /static/about.html:
+    get:
+      operationId:      get_about
+      summary:          Returns the used 3rd party libs with licenses.
+      description:      Returns the list of used 3rd party libraries used by this service together with their corresponding licenses in HTML format.
+      tags:             [ misc ]
+      produces:         [ text/html ]
+      responses:
+        200:
+          description:  A list of 3rd party libraries together with their corresponding licenses in HTML format.
+      x-adsk-apigee:
+        x-adsk-internal-only: true
+        slo:            { latency: { percentileRanks: { p50: 500, p90: 700, p95: 900, p99: 1000 } } } # timing values are in ms
+
+  /swagger.json:
+    get:
+      operationId:      get_swagger_json
+      summary:          Return the swagger spec for this service.
+      description:      Return the `swagger` spec in `JSON` format for this service.
+      tags:             [ misc ]
+      produces:         [ application/json ]
+      responses:
+        200:            { $ref: '#/responses/swagger_json_200' }
+
+  /api-docs:
+    x-adsk-internal-only: true
+    get:
+      operationId:      get_swagger_ui
+      summary:          Returns a Swagger UI page.
+      description:      "Returns a Swagger UI page describing all available endpoints with corresponding parameters and schemas."
+      tags:             [ misc ]
+      produces:         [ text/html ]
+      responses:
+        200:
+          description:  A Swagger UI page describing all available endpoints with corresponding parameters and schemas.
+  /api-docs/:
+    x-adsk-internal-only: true
+    get:
+      operationId:      get_swagger_ui_slash
+      summary:          Returns a Swagger UI page.
+      description:      "Returns a Swagger UI page describing all available endpoints with corresponding parameters and schemas."
+      tags:             [ misc ]
+      produces:         [ text/html ]
+      responses:
+        200:
+          description:  A Swagger UI page describing all available endpoints with corresponding parameters and schemas.
+  /api-docs/{api_docs_resource}:
+    x-adsk-internal-only: true
+    parameters:
+    - { $ref: '#/parameters/api_docs_resource' }
+    get:
+      operationId:      get_swagger_ui_resource
+      summary:          Returns a Swagger UI page.
+      description:      "Returns a Swagger UI page describing all available endpoints with corresponding parameters and schemas."
+      tags:             [ misc ]
+      produces:         [ '*' ]
+      responses:
+        200:
+          description:  A Swagger UI page describing all available endpoints with corresponding parameters and schemas.
+
+
+parameters:
+  hubId:
+    name:         hubId
+    in:           path
+    description:  A `hub ID`.
+    required:     true
+    type:         string
+  projectId:
+    name:         projectId
+    in:           path
+    description:  A `project ID`.
+    required:     true
+    type:         string
+  teamId:
+    name:         teamId
+    in:           path
+    description:  A `team ID`.
+    required:     true
+    type:         string
+  packageId:
+    name:         packageId
+    in:           path
+    description:  A `package ID`.
+    required:     true
+    type:         string
+  packageVersion:
+    name:         packageVersion
+    in:           path
+    description:  A `package version`.
+    required:     true
+    type:         integer
+
+  api_docs_resource:
+    x-adsk-internal-only: true
+    name:         api_docs_resource
+    in:           path
+    description:  Resource related to the API docs.
+    required:     true
+    type:         string
+
+  header_ifMatch:
+    name:         if-match
+    in:           header
+    description:  Use the `if-match` header for CAS (compare and set) support.
+    required:     true
+    type:         string
+
+  body_initProject:
+    name:         initProject
+    in:           body
+    description:  The payload for initializing a `project`.
+    required:     true
+    schema:       { $ref: '#/definitions/InitProjectRequest' }
+  body_updateProject:
+    name:         updateProject
+    in:           body
+    description:  The payload for updating an existing `project`.
+    required:     true
+    schema:       { $ref: '#/definitions/UpdateProjectRequest' }
+  body_createTeam:
+    name:         createTeam
+    in:           body
+    description:  The payload for creating a new `team`.
+    required:     true
+    schema:       { $ref: '#/definitions/CreateTeamRequest' }
+  body_updateTeam:
+    name:         updateTeam
+    in:           body
+    description:  The payload for updating an existing `team`.
+    required:     true
+    schema:       { $ref: '#/definitions/UpdateTeamRequest' }
+  body_createPackage:
+    name:         createPackage
+    in:           body
+    description:  The payload for creating a new `package`.
+    required:     true
+    schema:       { $ref: '#/definitions/CreatePackageRequest' }
+  body_updatePackage:
+    name:         updatePackage
+    in:           body
+    description:  The payload for updating an existing `package`.
+    required:     true
+    schema:       { $ref: '#/definitions/CreatePackageRequest' } # "update package" uses the same schema as the "create package" op
+  body_addToDocumentSet:
+    name:         addToDocumentSet
+    in:           body
+    description:  The payload for adding an existing package to an existing `Document Set`.
+    required:     true
+    schema:       { $ref: '#/definitions/AddPackageToDocumentSetRequest' }
+  body_updateSchedule:
+    name:         updateSchedule
+    in:           body
+    description:  The payload for updating or creating a c4r publish schedule
+    required:     true
+    schema:       { $ref: '#/definitions/UpdateScheduleRequest' }
+
+  header_xAdskSignature:
+    x-adsk-internal-only: true
+    name:         x-adsk-signature
+    in:           header
+    description:  Contains the signature/hash calculated by some ADSK services required for payload validation.
+    required:     true
+    type:         string
+
+  query_otgContext:
+    x-adsk-internal-only: true
+    name:         context
+    in:           query
+    description:  An `OTG context`.
+    required:     true
+    type:         string
+  query_otgSignature:
+    x-adsk-internal-only: true
+    name:         signature
+    in:           query
+    description:  Contains the signature/hash calculated by some ADSK services required for payload validation.
+    required:     true
+    type:         string
+
+
+  query_forceUpdateDocumentSet:
+    name:         force
+    in:           query
+    description:  Force to update the `Document Set` even in case that some version conflicts exist.
+    required:     false
+    type:         boolean
+    default:      false
+
+  query_epochSince:
+    name:         since
+    in:           query
+    description:  'Do not return events before this date (unit: unix epoch).'
+    required:     false
+    type:         integer
+  query_epochUntil:
+    name:         until
+    in:           query
+    description:  'Do not return events after this date (unit: unix epoch).'
+    required:     false
+    type:         integer
+
+  query_packageWithDetailsDefaultTrue:
+    name:         withDetails
+    in:           query
+    description:  If `true` returns the full details for the `package` (incl. the `model` details and associated `viewsets`).
+    required:     false
+    type:         boolean
+    default:      true
+
+  query_packageWithDetailsDefaultFalse:
+    name:         withDetails
+    in:           query
+    description:  If `true` returns the full details for the `package` (incl. the `model` details and associated `viewsets`).
+    required:     false
+    type:         boolean
+    default:      false
+
+  query_filterPackagesByModels:
+    name:         filterByModels
+    in:           query
+    description:  >
+      Allows to filter the packages list by models that needs to be contained in the package.<br>
+
+      The model can be specified by a specific `versionId` (e.g., `filterByModels=urn%3Aadsk.wipstg%3Afs.file%3Avf.SeKULbMKQwmZCRtuIQ7DnQ%3Fversion%3D3`),
+      or by a specific `itemId` optionally followed by `min` (inclusive) and `max` (exclusive) version numbers separated by a semicolon
+      (e.g., `filterByModels=urn%3Aadsk.wipstg%3Adm.lineage%3ASeKULbMKQwmZCRtuIQ7DnQ;2;5`).<br>
+
+      The version numbers can be omitted and will then default to `0` for the `min` version number and `MAX_INT` for the `max` version number
+      (e.g., `filterByModels=urn%3Aadsk.wipstg%3Adm.lineage%3ASeKULbMKQwmZCRtuIQ7DnQ;2;`).<br>
+
+      Several models can be specified by separating them with a comma.<br>
+
+      Note, that the `versionId` or `itemId` need to be properly URL encoded!
+    required:     false
+    type:         string
+
+
+responses:
+  get_status_200:
+    description:  Returns status and health information for a healthy or degraded service.
+    schema:       { $ref: '#/definitions/StatusResponse' }
+    headers:      { etag: { type: string } }
+
+  get_project_200:
+    description:  Returns the details for a project.
+    schema:       { $ref: '#/definitions/ProjectResponse' }
+    headers:      { etag: { type: string } }
+
+  init_project_200:
+    description:  Returns the details for the initialized project.
+    schema:       { $ref: '#/definitions/ProjectResponse' }
+    headers:      { etag: { type: string } }
+
+  update_project_200:
+    x-adsk-internal-only: true
+    description:  Returns the details for the updated `project`.
+    schema:       { $ref: '#/definitions/ProjectResponse' }
+    headers:      { etag: { type: string } }
+
+  delete_project_204:
+    x-adsk-internal-only: true
+    description:  Acknowledgement for successfully deleting the given project.
+    # no response payload
+
+  get_teams_list_200:
+    description:  Returns the `teams` list for the `project`.
+    schema:       { $ref: '#/definitions/TeamsListResponse' }
+    headers:      { etag: { type: string } }
+
+  get_team_200:
+    description:  Returns the details for the `team`.
+    schema:       { $ref: '#/definitions/TeamResponse' }
+    headers:      { etag: { type: string } }
+
+  create_team_200:
+    description:  Returns the details for the created `team`.
+    schema:       { $ref: '#/definitions/TeamResponse' }
+    headers:      { etag: { type: string } }
+
+  update_team_200:
+    description:  Returns the details for the updated `team`.
+    schema:       { $ref: '#/definitions/TeamResponse' }
+    headers:      { etag: { type: string } }
+
+  delete_team_204:
+    x-adsk-internal-only: true
+    description:  Acknowledgement for successfully deleting the given team.
+    # no response payload
+
+  get_events_list_200:
+    description:  Returns the package events for the `team`.
+    schema:       { $ref: '#/definitions/EventsListResponse' }
+    headers:      { etag: { type: string } }
+
+  get_packages_list_200:
+    description:  Returns the `packages` list for the `team`.
+    schema:       { $ref: '#/definitions/PackagesListResponse' }
+    headers:      { etag: { type: string } }
+
+  get_package_200:
+    description:  Returns the package details.
+    schema:       { $ref: '#/definitions/PackageResponse' }
+    headers:      { etag: { type: string } }
+
+  create_package_200:
+    description:  Returns the created package details.
+    schema:       { $ref: '#/definitions/PackageResponse' }
+    headers:      { etag: { type: string } }
+
+  update_package_200:
+    description:  Returns the updated package details.
+    schema:       { $ref: '#/definitions/PackageResponse' }
+    headers:      { etag: { type: string } }
+
+  delete_package_200:
+    description:  Returns the deleted package details.
+    schema:       { $ref: '#/definitions/PackageResponse' }
+    headers:      { etag: { type: string } }
+
+  share_package_200:
+    description:  Returns the shared package details.
+    schema:       { $ref: '#/definitions/PackageResponse' }
+    headers:      { etag: { type: string } }
+
+  consume_package_200:
+    description:  Returns the consumed package details.
+    schema:       { $ref: '#/definitions/PackageResponse' }
+    headers:      { etag: { type: string } }
+
+  add_pkg_to_doc_set_200:
+    description:  Returns the success of adding a shared package to a `Document Set`.
+    schema:       { $ref: '#/definitions/AddPackageToDocumentSetResponse' }
+
+  get_events_creds_200:
+    description:  Returns the credentials for the realtime notification system.
+    schema:       { $ref: '#/definitions/GetEventsCredsResponse' }
+    headers:      { etag: { type: string } }
+
+  swagger_json_200:
+    description:  Returns the swagger spec for this service.
+    # no schema validation yet
+
+  webhooks_forge_204:
+    x-adsk-internal-only: true
+    description:  Acknowledgement for accepting the `webhooks` callback.
+    # no response payload
+
+  webhooks_otg_204:
+    x-adsk-internal-only: true
+    description:  Acknowledgement for accepting the `OTG` callback.
+    # no response payload
+
+  webhooks_c4r_204:
+    x-adsk-internal-only: true
+    description:  Acknowledgement for accepting the `C4R` callback.
+    # no response payload
+
+  get_schedule_200:
+    x-adsk-internal-only: true
+    description:  Returns a schedule object for the team
+    schema: { $ref: '#/definitions/GetScheduleRequest' }
+
+  update_schedule_200:
+    x-adsk-internal-only: true
+    description:  Returns a schedule object for the team
+    schema: { $ref: '#/definitions/UpdateScheduleRequest' }
+  empty_schedule_204:
+    x-adsk-internal-only: true
+    description:  No schedule exists for the team.
+
+  error_response:
+    description:  Response in case of an error
+    schema:       { $ref: '#/definitions/ErrorResponse' }
+
+definitions:
+  ColorHexString:
+    type:         string
+    description:  'color in hex string format, e.g., "#FF8800"'
+    minLength:    7
+    maxLength:    7
+    pattern:      '^#([A-Fa-f0-9]{6})$'
+
+  StatusDef:
+    type:     object
+    required: [ type, id, name, healthy, health, service, db, memcached, timestamp, epoch ]
+    additionalProperties: false
+    properties:
+      type:         { type: string, enum: [ 'dcs:status' ] }
+      id:           { type: string, minLength: 1 }
+      name:         { type: string, minLength: 1 }
+      healthy:      { type: boolean }
+      health:
+        type:       object
+        required:   [ overall, details, degraded ]
+        additionalProperties: false
+        properties:
+          overall:  { type: string, enum: [ good, warning, critical ] }
+          details:  { type: string, minLength: 1 }
+          degraded: { type: boolean }
+      service:
+        type:       object
+        required:   [ hash, version, region, stage ]
+        additionalProperties: false
+        properties:
+          hash:     { type: string, minLength: 1 }
+          version:  { type: string, minLength: 1 }
+          region:   { type: string, minLength: 1 }
+          stage:    { type: string, minLength: 1 }
+      db:
+        type:       object
+        required:   [ healthy, host, database, version ]
+        additionalProperties: false
+        properties:
+          healthy:  { type: boolean }
+          host:     { type: string, minLength: 1 }
+          database: { type: string, minLength: 1 }
+          version:  { type: integer }
+      memcached:
+        type:       object
+        required:   [ healthy, version ]
+        additionalProperties: false
+        properties:
+          healthy:  { type: boolean }
+          version:  { type: string, minLength: 1 }
+      timestamp:    { type: string, minLength: 1 }
+      epoch:        { type: integer }
+
+  StatusResponse:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/StatusDef' } }
+
+  ProjectDef:
+    type:     object
+    required: [ type, projectId, hubId, sharedFolderId, consumedFolderName, isReadOnly, epoch ]
+    additionalProperties: false
+    properties:
+      type:               { type: string, enum: [ 'dcs:project' ] }
+      projectId:          { type: string }
+      hubId:              { type: string }
+      sharedFolderId:     { type: string }
+      consumedFolderName: { type: string }
+      masterModelItemId:  { type: string, description: 'optional property defining the project wide master model' }
+      acmScopes:          { type: array, items: { type: string, minLength: 1 }, minItems: 1, uniqueItems: true }
+      isReadOnly:         { type: boolean }
+      isDeletable:        { type: boolean }
+      epoch:              { type: integer }
+
+  ProjectResponse:
+    type:       object
+    required:   [ data ]
+    properties:
+      data:
+        type:       object
+        required:   [ project ]
+        properties:
+          project: { $ref: '#/definitions/ProjectDef' }
+
+  InitProjectDef:
+    type:     object
+    required: [ sharedFolderId ]
+    properties:
+      sharedFolderId:     { type: string, minLength: 1 }
+      consumedFolderName: { type: string, minLength: 1 }
+      masterModelItemId:  { type: string, description: 'optional property defining the project wide master model' }
+      isDeletable:        { type: boolean }
+
+  InitProjectRequest:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/InitProjectDef' } }
+
+  UpdateProjectDef:
+    x-adsk-internal-only: true
+    type:     object
+    properties:
+      isReadOnly:         { type: boolean }
+      masterModelItemId:  { type: string, description: 'optional property defining the project wide master model' }
+
+  UpdateProjectRequest:
+    x-adsk-internal-only: true
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/UpdateProjectDef' } }
+
+
+  TeamDef:
+    type:     object
+    required: [ type, projectId, teamId, teamName, isHidden, color, epoch, sharedFolderId, consumedFolderId, consumedTeamFolders, permissions, canBeDeleted ]
+    additionalProperties: false
+    properties:
+      type:             { type: string, enum: [ 'dcs:team' ] }
+      projectId:        { type: string, minLength: 1 }
+      teamId:           { type: string, minLength: 1 }
+      teamName:         { type: string, minLength: 1 }
+      isHidden:         { type: boolean }
+      canBeDeleted:     { type: boolean }
+      color:            { $ref: '#/definitions/ColorHexString' }
+      epoch:            { type: integer }
+      sharedFolderId:   { type: string, minLength: 1 }
+      consumedFolderId: { type: string, minLength: 1 }
+      consumedTeamFolders:
+        type: array
+        items:
+          type:     object
+          required: [ teamId, consumedFolderId ]
+          additionalProperties: false
+          properties:
+            teamId:           { type: string, minLength: 1 }
+            consumedFolderId: { type: string, minLength: 1 }
+      permissions:
+        type:     object
+        required: [ CAN_VIEW_WIP, CAN_EDIT_WIP, CAN_VIEW_SHARED, CAN_SHARE_WIP, CAN_VIEW_CONSUMED, CAN_CONSUME_SHARED, CAN_ADMIN_TEAM ]
+        additionalProperties: false
+        properties:
+          CAN_VIEW_WIP:       { type: boolean }
+          CAN_EDIT_WIP:       { type: boolean }
+          CAN_VIEW_SHARED:    { type: boolean }
+          CAN_SHARE_WIP:      { type: boolean }
+          CAN_VIEW_CONSUMED:  { type: boolean }
+          CAN_CONSUME_SHARED: { type: boolean }
+          CAN_ADMIN_TEAM:     { type: boolean }
+
+  TeamResponse:
+    type:       object
+    required:   [ data ]
+    properties:
+      data:
+        type:       object
+        required:   [ team ]
+        properties:
+          team: { $ref: '#/definitions/TeamDef' }
+
+  TeamsListResponse:
+    type:     object
+    required: [ data ]
+    properties:
+      data:
+        type:     object
+        required: [ teams ]
+        additionalProperties: false
+        properties:
+          teams:  { type: array, items: { $ref: '#/definitions/TeamDef' } }
+
+
+  EventDef:
+    type: object
+    required: [ type, projectId, teamId, packageId, packageVersion, revisionLabel, packageName, operation, message, epoch, userId, userName ]
+    additionalProperties: false
+    properties:
+      type:             { type: string, enum: [ 'dcs:package_event' ] }
+      projectId:        { type: string, minLength: 1 }
+      teamId:           { type: string, minLength: 1 }
+      packageId:        { type: string, minLength: 1 }
+      packageVersion:   { type: integer }
+      revisionLabel:    { type: string, minLength: 1 }
+      packageName:      { type: string, minLength: 1 }
+      operation:        { type: string, enum: [ PACKAGE_CREATED, PACKAGE_UPDATED, PACKAGE_DELETED, PACKAGE_SHARED, PACKAGE_CONSUMED ] }
+      message:          { type: string }
+      epoch:            { type: integer }
+      userId:           { type: string, minLength: 1 }
+      userName:         { type: string, minLength: 1 }
+
+  EventsListDef:
+    type: object
+    required: [ type, epochs, events ]
+    additionalProperties: false
+    properties:
+      type:       { type: string, enum: [ 'dcs:events' ] }
+      epochs:
+        type: object
+        required: [ oldest, newest ]
+        additionalProperties: false
+        properties:
+          oldest: { type: integer }
+          newest: { type: integer }
+      events:
+        type:   array
+        items:  { $ref: '#/definitions/EventDef' }
+
+  EventsListResponse:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/EventsListDef' } }
+
+  PackagesListDef:
+    type: object
+    required: [ type, id, version, revisionLabel, projectId, teamId, name, state, message, epoch, epochs ]
+    additionalProperties: false
+    properties:
+      type:             { type: string, enum: [ 'dcs:package' ] }
+      id:               { type: string, minLength: 1 }
+      version:          { type: integer }
+      revisionLabel:    { type: string, minLength: 1 }
+      projectId:        { type: string, minLength: 1 }
+      teamId:           { type: string, minLength: 1 }
+      name:             { type: string, minLength: 1 }
+      state:            { type: string, enum: [ WIP, SHARED, CONSUMED ] }
+      message:          { type: string }
+      prevPackageId:    { type: string, minLength: 1, description: 'optional, only present if there is a previous package this package is derived from' }
+      epoch:            { type: integer }
+      userId:           { type: string, minLength: 1 } # optional
+      userName:         { type: string, minLength: 1 } # optional
+      owningTeamId:     { type: string, minLength: 1, description: 'the owning team is the team that created this package in the first place and is responsible for its content' } # optional
+      epochs:
+        type:       object
+        additionalProperties: false
+        properties:
+          created:      { type: integer, description: 'timestamp of the creation date of this package' }
+          updated:      { type: integer, description: 'timestamp of last update by the owning team; this could be equal to the "created" timestamp if this package has not been updated after its creation' }
+          shared:       { type: integer, description: 'timestamp of the share operation performed by the owning team' }
+          consumed:     { type: integer, description: 'timestamp of the last consume operation for the requesting team' }
+      models:           { type: array, items: { $ref: '#/definitions/ModelDef' } }
+      viewsets:         { type: array, items: { $ref: '#/definitions/ViewsetDef' } }
+
+  PackagesListResponse:
+    type:       object
+    required:   [ data ]
+    properties: { data: { type: array, items: { $ref: '#/definitions/PackagesListDef' } } }
+
+
+  ForgeDmVersionDef:
+    type:     object
+    required: [ type, versionId, itemId, folderId, projectId, name, displayName, version, revisionLabel, epoch ]
+    properties:
+      type:                 { type: string,  enum: [ 'dcs:forge_dm_version' ] }
+      versionId:            { type: string,  minLength: 1 }
+      itemId:               { type: string,  minLength: 1 }
+      folderId:             { type: string,  minLength: 1 }
+      projectId:            { type: string,  minLength: 1 }
+      name:                 { type: string,  minLength: 1 }
+      displayName:          { type: string,  minLength: 1 }
+      version:              { type: integer, minimum:   1 }
+      revisionLabel:        { type: string,  minLength: 1 }
+      epoch:                { type: integer }
+      userId:               { type: string,  minLength: 1 }
+      userName:             { type: string,  minLength: 1 }
+      copiedFromVersionId:  { type: string,  minLength: 1 }
+
+  PackageDef:
+    type:     object
+    required: [ type, id, version, revisionLabel, projectId, teamId, name, state, operation, message, isDeleted, epoch, userId, userName ]
+    additionalProperties: false
+    properties:
+      type:             { type: string, enum: [ 'dcs:package_version' ] }
+      id:               { type: string, minLength: 1 }
+      version:          { type: integer }
+      revisionLabel:    { type: string, minLength: 1 }
+      projectId:        { type: string, minLength: 1 }
+      teamId:           { type: string, minLength: 1 }
+      name:             { type: string, minLength: 1 }
+      state:            { type: string, enum: [ WIP, SHARED, CONSUMED ] }
+      operation:        { type: string, enum: [ PACKAGE_CREATED, PACKAGE_UPDATED, PACKAGE_DELETED, PACKAGE_SHARED, PACKAGE_CONSUMED ] }
+      message:          { type: string }
+      isDeleted:        { type: boolean }
+      prevPackageId:    { type: string, minLength: 1 }
+      epoch:            { type: integer }
+      userId:           { type: string, minLength: 1 }
+      userName:         { type: string, minLength: 1 }
+      models:           { type: array, items: { $ref: '#/definitions/ModelDef' } }
+      viewsets:         { type: array, items: { $ref: '#/definitions/ViewsetDef' } }
+
+  ModelDef:
+    type:     object
+    required: [ versionId, isSelected ]
+    additionalProperties: false
+    properties:
+      versionId:        { type: string, minLength: 1 }
+      isSelected:       { type: boolean }
+      versionDetails:   { $ref: '#/definitions/ForgeDmVersionDef' }
+
+  ViewsetDef:
+    type:     object
+    required: [ name ]
+    additionalProperties: false
+    properties:
+      name: { type: string, minLength: 1 }
+
+  PackageResponse:
+    type:       object
+    required:   [ data ]
+    properties: { data: { type: array, items: { $ref: '#/definitions/PackageDef' } } }
+
+  CreatePackageDef:
+    type:     object
+    required: [ name, message, models, viewsets ]
+    properties:
+      name:      { type: string, minLength: 1 }
+      message:   { type: string }
+      models:    { type: array, items: { $ref: '#/definitions/ModelDef' } }
+      viewsets:  { type: array, items: { $ref: '#/definitions/ViewsetDef' } }
+
+  CreatePackageRequest:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/CreatePackageDef' } }
+
+  CreateTeamDef:
+    type:     object
+    required: [ teamName, sharedFolderId, consumedFolderId, color ]
+    properties:
+      teamName:         { type: string, minLength: 1 }
+      sharedFolderId:   { type: string, minLength: 1, description: 'specifies the folder ID used for the team within the global Shared folder' }
+      consumedFolderId: { type: string, minLength: 1, description: 'specifies the folder ID used for "Consumed" folder within the "team home" folder' }
+      color:            { $ref: '#/definitions/ColorHexString' }
+      isHidden:         { type: boolean }
+
+  CreateTeamRequest:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/CreateTeamDef' } }
+
+  UpdateTeamDef:
+    type:     object
+    properties:
+      teamName:    { type: string, minLength: 1 }
+      color:       { $ref: '#/definitions/ColorHexString' }
+      isHidden:    { type: boolean }
+
+  GetScheduleDef:
+    type:     object
+    additionalProperties: false
+    required: [ publishingConfiguredBy ]
+    properties:
+      lastPublishTriggeredAt:     { type: integer }
+      hour:                       { type: integer, minimum: 0, maximum: 23 }
+      weekDay:                    { type: integer, minimum: 0, maximum: 6  }
+      publishingConfiguredBy:     { type: string, minLength: 1 }
+      epoch:                      { type: integer }
+
+  UpdateScheduleDef:
+    type:     object
+    additionalProperties: false
+    properties:
+      hour:                       { type: integer, minimum: 0, maximum: 23 }
+      weekDay:                    { type: integer, minimum: 0, maximum: 6  }
+      epoch:                      { type: integer }
+
+  UpdateTeamRequest:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/UpdateTeamDef' } }
+
+  GetScheduleRequest:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/GetScheduleDef' } }
+
+  UpdateScheduleRequest:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/UpdateScheduleDef' } }
+
+  GetEventsCredsDef:
+    type:     object
+    required: [ type, iot, credentials ]
+    additionalProperties: false
+    properties:
+      type:         { type: string, enum: [ 'dcs:events_creds' ] }
+      iot:
+        type:       object
+        required:   [ endpoint, protocol, port, topics, region ]
+        additionalProperties: false
+        properties:
+          endpoint: { type: string,  minLength: 1 }
+          protocol: { type: string,  enum: [ wss ] }
+          port:     { type: integer }
+          topics:   { type: array,   items: { type: string, minLength: 1 }, minItems: 1, uniqueItems: true }
+          region:   { type: string,  minLength: 1 }
+      credentials:
+        type:       object
+        required:   [ accessKey, secretKey, sessionToken, expiration, expiresIn ]
+        additionalProperties: false
+        properties:
+          accessKey:    { type: string,  minLength: 1 }
+          secretKey:    { type: string,  minLength: 1 }
+          sessionToken: { type: string,  minLength: 1 }
+          expiration:   { type: integer, description: 'expirary timestamp in epoch (ms) for these credentials' }
+          expiresIn:    { type: integer, description: 'time in seconds until the credentials are about to expire again' }
+
+  GetEventsCredsResponse:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/GetEventsCredsDef' } }
+
+
+  AddPackageToDocumentSetRequest:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/AddPackageToDocumentSetDef' } }
+
+  AddPackageToDocumentSetDef:
+    type:     object
+    required: [ documentSetId ]
+    properties:
+      documentSetId:  { type: string, minLength: 1 }
+
+  AddPackageToDocumentSetResponse:
+    type:       object
+    required:   [ data ]
+    properties: { data: { $ref: '#/definitions/AddPackageToDocumentSetResponseDef' } }
+
+  AddPackageToDocumentSetResponseDef:
+    type:     object
+    required: [ documentSetId, added, conflicts ]
+    properties:
+      documentSetId:  { type: string, minLength: 1 }
+      added:
+        type: array
+        items:
+          type: object
+          required: [ versionId ]
+          properties:
+            versionId: { type: string, minLength: 1 }
+      conflicts:
+        type: array
+        items:
+          type: object
+          required: [ versionId, name, version, revisionLabel ]
+          properties:
+            versionId:      { type: string, minLength: 1 }
+            name:           { type: string, minLength: 1 }
+            version:        { type: integer }
+            revisionLabel:  { type: string, minLength: 1 }
+
+
+  ErrorDef: # http://jsonapi.org/format/#error-objects
+    type:       object
+    required:   [ id, status, title, code ]
+    additionalProperties: false
+    properties:
+      id:       { type: string, minLength: 1, description: 'a unique identifier for this particular occurrence of the problem, which can be used for internal tracing/debugging' }
+      status:   { type: integer,              description: 'the HTTP status code most applicable to this problem' }
+      title:    { type: string, minLength: 1, description: 'a short, human-readable summary of the problem that will not change from occurrence to occurrence of the problem' }
+      detail:   { type: string, minLength: 1, description: 'a human-readable explanation specific to this occurrence of the problem' }
+      meta:     { type: object,               description: 'additional information for this particular occurence of the problem' }
+      code:
+        type:         string
+        description:  a unique predefined error code for the encountered problem
+        enum:         [ 'will be filled with the error codes defined by "#/x-adsk-fluent-errors' ]
+
+  ErrorResponse:
+    type:       object
+    required:   [ error ]
+    properties: { error: { $ref: '#/definitions/ErrorDef' } }
+
+x-adsk-fluent-errors:
+  # use the script "npm run generate:i18n" to extract the error strings for translation and update
+  # the corresponding JSON file (https://git.autodesk.com/fluent/design-collaboration/tree/master/res/locales/en)
+  # each time you are changing something here
+- { code: FLUENT_ERROR_HEADER_AUTH_MISSING,                   status: 401, description: 'The "authorization" header is missing.' }
+- { code: FLUENT_ERROR_HEADER_AUTH_INVALID_OR_EXPIRED,        status: 401, description: 'The "authorization" header is invalid or has expired.' }
+- { code: FLUENT_ERROR_HEADER_IF_MATCH_MISSING,               status: 428, description: 'The "if-match" header is missing' }
+
+- { code: FLUENT_ERROR_PROJECT_OR_USER_NOT_ENTITLED,          status: 403, description: 'The "collab" entitlement is not enabled for the given project and/or user.' }
+- { code: FLUENT_ERROR_PROJECT_IS_READ_ONLY,                  status: 403, description: 'The given project is in read-only mode and cannot be changed.' }
+- { code: FLUENT_ERROR_PROJECT_NOT_INITIALIZED,               status: 404, description: 'The given project has not been initialized for "BIM360 Design Collaboration".' }
+- { code: FLUENT_ERROR_PROJECT_ALREADY_EXISTS,                status: 400, description: 'The given project already exists and cannot be initialized again.' }
+- { code: FLUENT_ERROR_PROJECT_DEFINITION_INVALID,            status: 400, description: 'The given project definition is invalid.' }
+- { code: FLUENT_ERROR_PROJECT_DEFINITION_CHANGED,            status: 409, description: 'The project definition has been changed by someone else in the meantime. Please reload this page and try again.' }
+- { code: FLUENT_ERROR_PROJECT_NOT_DELETABLE,                 status: 400, description: 'The given project is not deletable.' }
+
+- { code: FLUENT_ERROR_USER_NOT_PROJECT_ADMIN,                status: 403, description: 'The user is not an admin of the given project.' }
+- { code: FLUENT_ERROR_USER_NO_TEAM_VIEWER,                   status: 403, description: 'The user has no permission to view packages of this team.' }
+- { code: FLUENT_ERROR_USER_NO_TEAM_EDITOR,                   status: 403, description: 'The user has no permission to edit packages of this team.' }
+- { code: FLUENT_ERROR_USER_NO_SHARED_VIEWER,                 status: 403, description: 'The user has no permission to view shared packages.' }
+- { code: FLUENT_ERROR_USER_NO_TEAM_SHARER,                   status: 403, description: 'The user has no permission to share packages of this team.' }
+- { code: FLUENT_ERROR_USER_NO_CONSUMED_TEAM_VIEWER,          status: 403, description: 'The user has no permission to view consumed packages of this team.' }
+- { code: FLUENT_ERROR_USER_NO_TEAM_CONSUMER,                 status: 403, description: 'The user has no permission to consume packages into this team.' }
+- { code: FLUENT_ERROR_USER_NO_TEAM_ADMIN,                    status: 403, description: 'The user has no permission to administer this team.' }
+- { code: FLUENT_ERROR_USER_HAS_NO_RCW_ENTITLEMENT,           status: 403, description: 'The user has no "Collaboration-for-Revit" entitlement.' }
+
+- { code: FLUENT_ERROR_PACKAGE_NOT_FOUND,                     status: 404, description: 'The given package could not be found.' }
+- { code: FLUENT_ERROR_PACKAGE_NOT_SHARED,                    status: 400, description: 'The given package has not been shared yet and cannot be consumed.' }
+- { code: FLUENT_ERROR_PACKAGE_ALREADY_SHARED,                status: 400, description: 'The given package has been shared already and cannot be changed anymore.' }
+- { code: FLUENT_ERROR_PACKAGE_BELONGS_TO_OTHER_TEAM,         status: 403, description: 'The given package belongs to another team and cannot be changed by this team.' }
+- { code: FLUENT_ERROR_PACKAGE_BELONGS_TO_SAME_TEAM,          status: 400, description: 'The given package belongs to this team and cannot be consumed by it again.' }
+- { code: FLUENT_ERROR_PACKAGE_DEFINITION_INVALID,            status: 400, description: 'The given package definition is invalid.' }
+- { code: FLUENT_ERROR_PACKAGE_FILES_NOT_IN_TEAM_FOLDER,      status: 400, description: 'At least one file referenced by the package definition is not located inside of the team folder.' }
+- { code: FLUENT_ERROR_PACKAGE_FILES_IN_TEAM_CONSUME_FOLDER,  status: 400, description: 'At least one file referenced by the package definition is located inside of the team''s "consume" sub-folder.' }
+- { code: FLUENT_ERROR_PACKAGE_VERSION_IS_INVALID,            status: 400, description: 'The given package version is not valid.' }
+- { code: FLUENT_ERROR_PACKAGE_VERSION_NOT_TIP,               status: 409, description: 'The package definition has been changed by someone else in the meantime. Please reload this page and try again.' }
+- { code: FLUENT_ERROR_PACKAGE_IS_DELETED,                    status: 400, description: 'The given package is already deleted and cannot be changed anymore.' }
+
+- { code: FLUENT_ERROR_SRC_MODEL_PROCESSING_INCOMPLETE,       status: 409, description: 'The given model cannot be copied since it has not been finished processing yet.' }
+- { code: FLUENT_ERROR_TRG_MODEL_PROCESSING_INCOMPLETE,       status: 409, description: 'The given model cannot be copied since the target model it should update has not been finished processing yet.' }
+
+- { code: FLUENT_ERROR_TEAM_DEFINITION_INVALID,               status: 400, description: 'The given team definition is invalid.' }
+- { code: FLUENT_ERROR_TEAM_NAME_ALREADY_EXISTS,              status: 409, description: 'The given team name already exists.' }
+- { code: FLUENT_ERROR_TEAM_ALREADY_EXISTS,                   status: 400, description: 'The given team already exists.' }
+- { code: FLUENT_ERROR_TEAM_NOT_FOUND,                        status: 404, description: 'The given team was not found.' }
+- { code: FLUENT_ERROR_TEAM_DEFINITION_CHANGED,               status: 409, description: 'The team definition has been changed by someone else in the meantime. Please reload this page and try again.' }
+- { code: FLUENT_ERROR_TEAM_NOT_DELETABLE,                    status: 409, description: 'This team cannot be deleted because it has shared/consumed packages.' }
+
+- { code: FLUENT_ERROR_MANIFEST_NOT_FOUND,                    status: 404, description: 'The manifest file for a seed file is not available.' }
+
+- { code: FLUENT_ERROR_SCHEDULE_DEFINITION_INVALID,           status: 400, description: 'The given publish schedule definition is invalid' }
+- { code: FLUENT_ERROR_SCHEDULE_CONFIGURATION_INVALID,        status: 400, description: 'The given schedule is not supported' }
+- { code: FLUENT_ERROR_SCHEDULE_DEFINITION_CHANGED,           status: 409, description: 'The schedule has been changed by someone else in the meantime. Please reload this page and try again.' }
+- { code: FLUENT_ERROR_SCHEDULE_NOT_FOUND,                    status: 404, description: 'The given publish schedule could not be found.' }
+
+- { code: FLUENT_ERROR_DOCUMENT_SET_DEFINITION_INVALID,       status: 400, description: 'The given document set definition is invalid.' }
+
+- { code: FLUENT_ERROR_SERVICE_INSTANCE_NOT_HEALTHY,          status: 500, description: 'The service instance is not healthy.' }
+
+- { code: FLUENT_ERROR_UPSTREAM_DEPENDENCY_ERROR,             status: 500, description: 'An upstream service request signalled an error.' }
+- { code: FLUENT_ERROR_UPSTREAM_RESOURCE_NOT_FOUND,           status: 404, description: 'An upstream service resource was not found.' }
+- { code: FLUENT_ERROR_UPSTREAM_RESOURCE_NOT_ACCESSIBLE,      status: 403, description: 'An upstream service resource is not accessible.' }
+- { code: FLUENT_ERROR_UPSTREAM_RESOURCE_CONFLICT,            status: 409, description: 'An upstream service was signalling a conflict.' }
+- { code: FLUENT_ERROR_UPSTREAM_CIRCUIT_BREAKER_ERROR,        status: 504, description: 'An upstream service is temporarily not available.' }
+- { code: FLUENT_ERROR_UPSTREAM_THROTTLING,                   status: 429, description: 'An upstream service is throttling your requests.' }
+
+- { code: FLUENT_ERROR_WEBHOOK_FORGE_INVALID,                 status: 400, description: 'Invalid payload for a forge webhook callback.' }
+
+- { code: FLUENT_ERROR_URL_QUERY_INVALID,                     status: 400, description: 'At least one query parameter specified in the URL is invalid.' }
+- { code: FLUENT_ERROR_RESOURCE_NOT_FOUND,                    status: 404, description: 'The requested resource was not found.' }
+
+- { code: FLUENT_ERROR_REALTIME_EVENTS_NOT_SUPPORTED,         status: 400, description: 'The backend does not support connecting to realtime events.' }
+- { code: FLUENT_ERROR_UNEXPECTED_ERROR,                      status: 500, description: 'An unexpected server error has been encountered.' }

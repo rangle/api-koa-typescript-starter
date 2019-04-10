@@ -4,6 +4,7 @@
     "esModuleInterop": true,
     "target": "es2017",
     "noImplicitAny": true,
+    "alwaysStrict": true,
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
