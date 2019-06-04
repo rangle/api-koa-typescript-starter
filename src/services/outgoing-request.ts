@@ -2,13 +2,9 @@ import request, { RequestPromiseOptions } from 'request-promise';
 import { logger } from './logger';
 
 export async function outgoingRequest({
-  requestId,
-  url,
-  options,
+  requestId, url, options
 }: {
-  requestId: string;
-  url: string;
-  options?: RequestPromiseOptions;
+  requestId: string, url: string, options?: RequestPromiseOptions
 }) {
   const method = options && options.method ? options.method : 'GET';
 

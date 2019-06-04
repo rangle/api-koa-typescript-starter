@@ -11,7 +11,6 @@ import { requestId } from './middleware/request-id';
 import { errorResponder } from './middleware/error-responder';
 import { morganFormatter } from './middleware/morgan-formatter';
 import { validateJwt } from './middleware/validate-jwt';
-import { swaggerEndpoint } from './middleware/swagger-endpoint';
 
 import { rootRouter } from './routes/root.routes';
 import { healthCheckRouter } from './routes/health-check/health-check.routes';
@@ -19,23 +18,20 @@ import { demoRouter } from './routes/demo/demo.routes';
 
 import { AppContext } from './app-context';
 
-import { resolveSchemaRefs } from './utils/swagger-utils';
+import { SwaggerContext } from './services/swagger-context';
 
-import * as yaml from 'js-yaml';
-import fs from 'fs';
-
-const origSchema = yaml.safeLoad(fs.readFileSync(__dirname + '/swagger.spec.yml').toString());
-const schema = resolveSchemaRefs(origSchema);
+const swagger = SwaggerContext.fromFile(__dirname + '/swagger.spec.yml');
 
 declare module 'koa' {
-  interface Context {
+  export interface Context {
     context?: AppContext;
   }
 }
 
 export const app = new Koa();
 app.context.context = {
-}; // as AppContext;
+  swagger
+};
 
 /* istanbul ignore if */
 if (env.REQUEST_LOGS) {
@@ -44,16 +40,15 @@ if (env.REQUEST_LOGS) {
 
 // Entry point for all modules.
 const api = new koaRouter()
-  .use('/', swaggerEndpoint({ schema, id: 'get_status' }), rootRouter.routes())
+  .use('/', rootRouter.routes())
   .use('/health', healthCheckRouter.routes())
-  .use('/demo', demoRouter.routes());
+  .use('/demo', bodyParser(), demoRouter.routes());
 
 app
   .use(helmet())
-  .use(validateJwt({ secret: env.JWT_SECRET, key: 'jwt_data' }))
-  .use(bodyParser())
   .use(requestId)
   .use(errorResponder)
+  .use(validateJwt({ secret: env.JWT_SECRET, key: 'jwt_data' }))
   .use(api.routes())
   .use(api.allowedMethods());
 

@@ -8,6 +8,8 @@ import { logger } from '../../services/logger';
  * nodes automatically.
  */
 export async function shallow(ctx: Context) {
+  console.dir(ctx.context.swaggerEndpoint.id);
+
   ctx.body = { healthy: true };
 }
 

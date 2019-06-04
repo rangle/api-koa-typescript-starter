@@ -1,8 +1,11 @@
-import { ISwaggerContext } from './services/swagger-context';
-import { EndpointDef } from './middleware/swagger-endpoint';
+import { SwaggerContext, SwaggerEndpoint } from './services/swagger-context';
+
 
 export interface AppContext {
-  endpointDef: EndpointDef;
+  swagger: SwaggerContext;
+  swaggerEndpoint: SwaggerEndpoint;
 
   requestId: string;
+
+  jwt: any;
 }

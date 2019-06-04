@@ -1,9 +1,9 @@
-import { Context } from 'koa';
+import Koa from 'koa';
 import { logger } from '../services/logger';
 
 const UNKNOWN_ERROR_CODE = 500;
 
-export async function errorResponder(ctx: Context, next: Function) {
+export async function errorResponder(ctx: Koa.Context, next: () => Promise<void>) {
   try {
     await next();
   } catch (err) {

@@ -22,7 +22,7 @@
     "test": "cross-env PROJECT_ENV=testing jest --config jest-config.json",
     "test:cov": "cross-env PROJECT_ENV=testing jest --coverage --config jest-config.json",
     "test:watch": "cross-env PROJECT_ENV=testing jest --watch --config jest-config.json",
-    "lint": "tslint --project ./tsconfig.json && tsc --noEmit",
+    "lint": "tslint --fix --project ./tsconfig.json && tsc --noEmit",
     "daemon:start": "forever --uid api-koa-starter -a -c 'node --use-strict' start ./dist/src/app.js",
     "daemon:stop": "forever stop api-koa-starter || true",
     "build": "tsc"
@@ -41,25 +41,25 @@
     "winston": "^3.0.0"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.11",
+    "@types/jest": "^24.0.13",
     "@types/js-yaml": "^3.12.1",
     "@types/koa": "^2.0.46",
     "@types/koa-helmet": "^3.1.2",
     "@types/koa-morgan": "^1.0.4",
     "@types/koa-router": "^7.0.31",
     "@types/morgan": "^1.7.35",
-    "@types/ramda": "^0.26.6",
-    "@types/request-promise": "^4.1.42",
+    "@types/ramda": "^0.26.9",
+    "@types/request-promise": "^4.1.44",
     "@types/supertest": "^2.0.5",
     "@types/uuid": "^3.4.3",
     "cross-env": "^5.2.0",
     "forever": "^1.0.0",
-    "jest": "^24.7.1",
+    "jest": "^24.8.0",
     "supertest": "^4.0.2",
     "ts-jest": "^24.0.2",
-    "ts-node": "^8.0.3",
-    "ts-node-dev": "^1.0.0-pre.26",
-    "tslint": "^5.11.0",
-    "typescript": "^3.0.1"
+    "ts-node": "^8.2.0",
+    "ts-node-dev": "^1.0.0-pre.39",
+    "tslint": "^5.17.0",
+    "typescript": "^3.5.1"
   }
 }

@@ -2,7 +2,6 @@ import koaRouter from 'koa-router';
 import { demo, error, errorWithoutMessage } from './demo.controller';
 import { validateParams } from '../../middleware/validate-params';
 import { authorize } from '../../middleware/authorize';
-import { Context } from 'koa';
 
 const match = (regex: RegExp) => (term: string) => regex.test(term);
 

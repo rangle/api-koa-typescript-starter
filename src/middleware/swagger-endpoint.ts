@@ -1,39 +1,11 @@
 import Koa from 'koa';
 
-export type EndpointDef = {
-  path: string;
-  method: string;
-  def: any;
-  schema: any;
-};
+export function swaggerEndpoint(opts: { id: string }) {
+  return async (ctx: Koa.Context, next: () => Promise<void>) => {
+    const ep = ctx.context.swagger.endpoint(opts.id);
+    if (!ep) { throw new Error(`"${opts.id}" not found in swagger schema`); }
 
-export function findEndpoint(schema: any, id: string): EndpointDef | undefined {
-  let found: EndpointDef;
-
-  Object.keys(schema.paths).filter(path => schema.paths[path]).forEach(path => {
-    const p = schema.paths[path];
-
-    ['get', 'put', 'post', 'patch', 'delete'].filter(m => p[m]).forEach(method => {
-        const def = p[method];
-        if (def.operationId === id) {
-          found = {
-            path, method, def, schema
-          };
-        }
-    });
-  });
-
-  return found;
-}
-
-export function swaggerEndpoint(opts: { schema: any, id: string }) {
-  const { schema, id } = opts;
-
-  const def = findEndpoint(schema, id);
-  if (!def) { throw new Error(`"${id}" not found in swagger schema`); }
-
-  return async (ctx: Koa.Context, next: Function) => {
-    ctx.context.endpointDef = def;
+    ctx.context.swaggerEndpoint = ep;
     await next();
   };
 }

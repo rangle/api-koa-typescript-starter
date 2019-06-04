@@ -1,4 +1,4 @@
-import { Context } from 'koa';
+import Koa from 'koa';
 import { logger } from '../services/logger';
 import R from 'ramda';
 
@@ -22,26 +22,28 @@ interface Container<T> {
  * parameters in question. If this is omitted, a simple presence check will
  * be performed.
  */
-export const validateParams = <T>(
+export function validateParams<T>(
   containerPath: string[],
   params: string[],
   validator?: Validator<T>
-) => async (ctx: Context, next: Function) => {
-  const container: Container<T> = R.path(containerPath, ctx);
+) {
+  return async (ctx: Koa.Context, next: () => Promise<void>) => {
+    const container: Container<T> = R.path(containerPath, ctx);
 
-  if (!container) {
-    logger.warn('Invalid param container %j: %j', container, {
-      requestId: ctx.context.requestId
-    });
-    ctx.throw(400, 'Bad request');
-  }
+    if (!container) {
+      logger.warn('Invalid param container %j: %j', container, {
+        requestId: ctx.context.requestId
+      });
+      ctx.throw(400, 'Bad request');
+    }
 
-  R.forEach(assertValid(ctx, container, validator), params);
-  await next();
-};
+    R.forEach(assertValid(ctx, container, validator), params);
+    await next();
+  };
+}
 
 const assertValid = <T>(
-  ctx: Context,
+  ctx: Koa.Context,
   container: Container<T>,
   validator?: Validator<T>
 ) => (param: string) => {
